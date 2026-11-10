@@ -25,7 +25,7 @@ function listDocuments(req, res) {
 
 function downloadDocument(req, res) {
   const document = documentsService.findDocumentById(req.params.id);
-  if (!document) {
+  if (!document || !/^[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}$/i.test(document.filename)) {
     return res.status(404).json({ error: 'Documento não encontrado.' });
   }
 
