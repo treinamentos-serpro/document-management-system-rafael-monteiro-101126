@@ -1,31 +1,21 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const express = require('express');
 const createDownloadRateLimiter = require('../src/middleware/download-rate-limit.middleware');
 
-test('limita downloads por endereço IP e informa quando tentar novamente', () => {
-  const rateLimiter = createDownloadRateLimiter({ limit: 1, windowMs: 60_000 });
-  const req = { ip: '127.0.0.1' };
-  let statusCode;
-  let retryAfter;
-  let nextCalls = 0;
-  const res = {
-    set(name, value) {
-      if (name === 'Retry-After') retryAfter = value;
-      return this;
-    },
-    status(value) {
-      statusCode = value;
-      return this;
-    },
-    json(body) {
-      return body;
-    },
-  };
+test('limita downloads por endereço IP e informa quando tentar novamente', async () => {
+  const app = express();
+  app.get('/', createDownloadRateLimiter({ limit: 1 }), (req, res) => res.send('ok'));
+  const server = app.listen(0);
+  await new Promise((resolve) => server.once('listening', resolve));
 
-  rateLimiter(req, res, () => nextCalls++);
-  rateLimiter(req, res, () => nextCalls++);
-
-  assert.equal(nextCalls, 1);
-  assert.equal(statusCode, 429);
-  assert.equal(Number(retryAfter) > 0, true);
+  try {
+    const url = `http://127.0.0.1:${server.address().port}/`;
+    assert.equal((await fetch(url)).status, 200);
+    const limitedResponse = await fetch(url);
+    assert.equal(limitedResponse.status, 429);
+    assert.ok(Number(limitedResponse.headers.get('retry-after')) > 0);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
 });

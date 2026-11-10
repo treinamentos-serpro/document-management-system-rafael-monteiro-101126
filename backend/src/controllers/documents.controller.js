@@ -29,8 +29,9 @@ function downloadDocument(req, res) {
     return res.status(404).json({ error: 'Documento não encontrado.' });
   }
 
+  const filename = path.basename(document.filename);
   return res.download(
-    path.join(storageDirectory, document.filename),
+    path.join(storageDirectory, filename),
     document.originalName,
   );
 }
