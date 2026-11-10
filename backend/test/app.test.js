@@ -4,8 +4,7 @@ const fs = require('node:fs/promises');
 const app = require('../src/app');
 const documentRepository = require('../src/repositories/documentRepository');
 
-// Teste de fumaça do seed: garante que o app Express foi exportado.
-// Novos testes serão adicionados durante os Steps 2, 6 e 7 com auxílio do Copilot.
+// Garante que o app Express foi exportado.
 test('o app backend é exportado', () => {
   assert.ok(app, 'o app deve estar definido');
   assert.strictEqual(typeof app, 'function', 'o app Express deve ser uma função');
