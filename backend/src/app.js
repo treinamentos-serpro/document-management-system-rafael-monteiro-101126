@@ -11,6 +11,7 @@
 // usando multer com diskStorage. Não utilize provedores externos.
 
 const express = require('express');
+const documentRoutes = require('./routes/documentRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,6 +22,23 @@ app.use(express.json());
 // /documents/:id/download) serão implementadas durante o Passo 2.
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+app.use('/', documentRoutes);
+
+app.use((error, req, res, next) => {
+  if (res.headersSent) {
+    return next(error);
+  }
+
+  const isMulterError = error.name === 'MulterError';
+  const status = error.statusCode || (isMulterError
+    ? error.code === 'LIMIT_FILE_SIZE' ? 413 : 400
+    : 500);
+  const code = error.code || (isMulterError ? 'UPLOAD_ERROR' : 'INTERNAL_ERROR');
+  const message = status === 500 ? 'Ocorreu um erro interno.' : error.message;
+
+  res.status(status).json({ error: { code, message } });
 });
 
 if (require.main === module) {
