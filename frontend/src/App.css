@@ -93,6 +93,9 @@ td:first-child { display: flex; align-items: center; gap: 11px; color: var(--ink
 .download-button span { font-size: 15px; }
 .download-button:disabled { color: var(--muted); }
 .empty-state, .list-message { min-height: 128px; display: grid; place-content: center; justify-items: center; color: var(--muted); }
+.list-error { min-height: 128px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #873c2c; font-size: 12px; text-align: center; }
+.list-error p { margin: 0; }
+.list-error button { padding: 7px 10px; border: 1px solid var(--line); background: white; color: var(--green-dark); font-size: 11px; font-weight: 600; }
 .empty-state p { margin: 7px 0 0; font-size: 12px; }
 .empty-mark { color: var(--orange); font-size: 22px; }
 .list-message { font-size: 12px; }

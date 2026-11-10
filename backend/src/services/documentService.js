@@ -35,9 +35,10 @@ class DocumentService {
     };
 
     try {
+      await fs.chmod(file.path, 0o600);
       this.repository.save(document);
     } catch (error) {
-      await fs.rm(file.path, { force: true });
+      await fs.rm(file.path, { force: true }).catch(() => {});
       throw error;
     }
 

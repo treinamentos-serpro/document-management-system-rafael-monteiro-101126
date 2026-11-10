@@ -71,6 +71,8 @@ O caminho físico é resolvido pelo backend a partir do diretório de armazename
 
 A especificação não define autenticação. Nesta fase, `owner` é configurado no backend por `DMS_DEFAULT_OWNER`, cujo padrão é `local-user`. Essa identidade serve ao MVP local e não representa controle de acesso seguro nem autenticação de múltiplos usuários.
 
+Por isso, o backend escuta em `127.0.0.1` por padrão. Alterar `HOST` para uma interface de rede não adiciona autenticação: só exponha o serviço em uma rede confiável e atrás de uma camada que aplique controle de acesso.
+
 ## 6. Contratos de API
 
 As rotas do backend permanecem sem o prefixo `/api`. No desenvolvimento, o Vite encaminha `/api/*` ao backend e remove esse prefixo antes de encaminhar a requisição.
@@ -130,7 +132,8 @@ Retorna o conteúdo binário do documento com `Content-Disposition` contendo o n
 
 ### Configuração e limitações
 
-- Variáveis: `PORT` (padrão `3000`), `STORAGE_DIR` (padrão `backend/storage`), `MAX_UPLOAD_SIZE` (padrão `10485760` bytes) e `DMS_DEFAULT_OWNER` (padrão `local-user`).
+- Variáveis: `HOST` (padrão `127.0.0.1`), `PORT` (padrão `3000`), `STORAGE_DIR` (padrão `backend/storage`), `MAX_UPLOAD_SIZE` (padrão `10485760` bytes) e `DMS_DEFAULT_OWNER` (padrão `local-user`).
+- O diretório de armazenamento recebe permissões `0700` e cada arquivo enviado recebe `0600`; mantenha `STORAGE_DIR` em um filesystem local com permissões POSIX compatíveis.
 - Metadados em memória são voláteis. Após reiniciar o backend, arquivos podem continuar no disco sem registros correspondentes.
 - A ausência de autenticação é uma limitação explícita desta fase.
 

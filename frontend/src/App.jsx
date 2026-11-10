@@ -11,6 +11,7 @@ import './App.css';
 export default function App() {
   const [documents, setDocuments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -18,10 +19,13 @@ export default function App() {
 
     listDocuments()
       .then((items) => {
-        if (active) setDocuments(items);
+        if (active) {
+          setDocuments(items);
+          setLoadError('');
+        }
       })
       .catch((requestError) => {
-        if (active) setError(requestError.message);
+        if (active) setLoadError(requestError.message);
       })
       .finally(() => {
         if (active) setIsLoading(false);
@@ -34,8 +38,31 @@ export default function App() {
 
   async function handleUpload(file) {
     setError('');
-    await uploadDocument(file);
-    setDocuments(await listDocuments());
+    const uploadedDocument = await uploadDocument(file);
+    try {
+      setDocuments(await listDocuments());
+      setLoadError('');
+    } catch (requestError) {
+      setDocuments((currentDocuments) => [
+        uploadedDocument,
+        ...currentDocuments.filter((document) => document.id !== uploadedDocument.id),
+      ]);
+      setLoadError(requestError.message);
+      setError('Arquivo enviado, mas a lista não foi atualizada. Tente recarregá-la.');
+    }
+  }
+
+  async function handleRetryList() {
+    setError('');
+    setIsLoading(true);
+    setLoadError('');
+    try {
+      setDocuments(await listDocuments());
+    } catch (requestError) {
+      setLoadError(requestError.message);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   async function handleDownload(document) {
@@ -102,8 +129,10 @@ export default function App() {
           <DocumentList
             documents={documents}
             isLoading={isLoading}
+            loadError={loadError}
             onDownload={handleDownload}
             onError={setError}
+            onRetry={handleRetryList}
           />
         </section>
 

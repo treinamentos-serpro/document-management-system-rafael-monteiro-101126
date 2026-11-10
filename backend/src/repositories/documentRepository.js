@@ -24,7 +24,8 @@ class DocumentRepository {
   }
 
   getFilePath(storageName) {
-    if (path.basename(storageName) !== storageName) {
+    const isUuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(storageName);
+    if (!isUuid) {
       throw new Error('Nome de armazenamento inválido.');
     }
 

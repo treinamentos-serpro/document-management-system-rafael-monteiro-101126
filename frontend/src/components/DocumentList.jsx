@@ -1,9 +1,18 @@
 import DownloadButton from './DownloadButton.jsx';
 import { formatBytes, formatDate } from '../utils/format.js';
 
-export default function DocumentList({ documents, isLoading, onDownload, onError }) {
+export default function DocumentList({ documents, isLoading, loadError, onDownload, onError, onRetry }) {
   if (isLoading) {
     return <p className="list-message" role="status">Carregando documentos...</p>;
+  }
+
+  if (loadError) {
+    return (
+      <div className="list-error" role="alert">
+        <p>Não foi possível carregar os documentos: {loadError}</p>
+        <button type="button" onClick={onRetry}>Tentar novamente</button>
+      </div>
+    );
   }
 
   if (documents.length === 0) {

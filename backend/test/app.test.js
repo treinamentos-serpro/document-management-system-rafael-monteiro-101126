@@ -2,12 +2,22 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs/promises');
 const app = require('../src/app');
+const { storageDirectory } = require('../src/config/storage');
 const documentRepository = require('../src/repositories/documentRepository');
 
 // Garante que o app Express foi exportado.
 test('o app backend é exportado', () => {
   assert.ok(app, 'o app deve estar definido');
   assert.strictEqual(typeof app, 'function', 'o app Express deve ser uma função');
+});
+
+test('rejeita nomes de armazenamento que poderiam escapar do diretório', () => {
+  for (const storageName of ['.', '..', '../fora', '/tmp/fora', 'arquivo.txt']) {
+    assert.throws(
+      () => documentRepository.getFilePath(storageName),
+      /Nome de armazenamento inválido\./
+    );
+  }
 });
 
 test('faz upload, lista e baixa um documento', async () => {
@@ -33,6 +43,16 @@ test('faz upload, lista e baixa um documento', async () => {
     );
     assert.strictEqual(uploadedDocument.originalName, 'teste.txt');
     assert.strictEqual(uploadedDocument.size, 17);
+    const storedDocument = documentRepository.findByIdAndOwner(
+      uploadedId,
+      uploadedDocument.owner
+    );
+    const storedFileStat = await fs.stat(
+      documentRepository.getFilePath(storedDocument.storageName)
+    );
+    const storageDirectoryStat = await fs.stat(storageDirectory);
+    assert.strictEqual(storedFileStat.mode & 0o777, 0o600);
+    assert.strictEqual(storageDirectoryStat.mode & 0o777, 0o700);
 
     const listResponse = await fetch(`${baseUrl}/documents`);
     assert.strictEqual(listResponse.status, 200);
@@ -69,6 +89,24 @@ test('rejeita upload sem arquivo', async () => {
     });
     assert.strictEqual(response.status, 400);
     assert.strictEqual((await response.json()).error.code, 'FILE_REQUIRED');
+  } finally {
+    server.close();
+  }
+});
+
+test('rejeita campos multipart além do arquivo', async () => {
+  const server = app.listen(0);
+  await new Promise((resolve) => server.once('listening', resolve));
+
+  try {
+    const formData = new FormData();
+    formData.append('unexpected', 'value');
+    const response = await fetch(`http://127.0.0.1:${server.address().port}/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+    assert.strictEqual(response.status, 400);
+    assert.strictEqual((await response.json()).error.code, 'LIMIT_FIELD_COUNT');
   } finally {
     server.close();
   }
