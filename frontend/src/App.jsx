@@ -4,28 +4,13 @@ import {
   listDocuments,
   uploadDocument,
 } from './services/documentService.js';
+import UploadComponent from './components/UploadComponent.jsx';
+import DocumentList from './components/DocumentList.jsx';
 import './App.css';
-
-function formatBytes(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatDate(value) {
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value));
-}
 
 export default function App() {
   const [documents, setDocuments] = useState([]);
-  const [selectedFile, setSelectedFile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
-  const [downloadingId, setDownloadingId] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -47,48 +32,15 @@ export default function App() {
     };
   }, []);
 
-  function chooseFile(file) {
-    if (file) {
-      setSelectedFile(file);
-      setError('');
-    }
-  }
-
-  async function handleUpload(event) {
-    event.preventDefault();
-    if (!selectedFile) return;
-
-    const form = event.currentTarget;
-    setIsUploading(true);
+  async function handleUpload(file) {
     setError('');
-    try {
-      await uploadDocument(selectedFile);
-      setSelectedFile(null);
-      form.reset();
-      setDocuments(await listDocuments());
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setIsUploading(false);
-    }
+    await uploadDocument(file);
+    setDocuments(await listDocuments());
   }
 
   async function handleDownload(document) {
-    setDownloadingId(document.id);
     setError('');
-    try {
-      await downloadDocument(document.id, document.originalName);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setDownloadingId(null);
-    }
-  }
-
-  function handleDrop(event) {
-    event.preventDefault();
-    setIsDragging(false);
-    chooseFile(event.dataTransfer.files?.[0]);
+    await downloadDocument(document.id, document.originalName);
   }
 
   return (
@@ -128,42 +80,7 @@ export default function App() {
             <span className="section-note">Um arquivo por envio</span>
           </div>
 
-          <form onSubmit={handleUpload}>
-            <label
-              className={`drop-zone${isDragging ? ' is-dragging' : ''}${selectedFile ? ' has-file' : ''}`}
-              htmlFor="document-file"
-              onDragEnter={(event) => {
-                event.preventDefault();
-                setIsDragging(true);
-              }}
-              onDragOver={(event) => event.preventDefault()}
-              onDragLeave={(event) => {
-                if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false);
-              }}
-              onDrop={handleDrop}
-            >
-              <input
-                id="document-file"
-                name="file"
-                type="file"
-                onChange={(event) => chooseFile(event.target.files?.[0])}
-              />
-              <span className="upload-symbol" aria-hidden="true">+</span>
-              <span className="drop-copy">
-                <strong>{selectedFile ? selectedFile.name : 'Escolha um arquivo'}</strong>
-                <span>{selectedFile ? formatBytes(selectedFile.size) : 'ou arraste e solte aqui'}</span>
-              </span>
-              <span className="browse-action">Procurar</span>
-            </label>
-
-            <div className="upload-actions">
-              <span className="upload-hint">Os arquivos são armazenados neste servidor.</span>
-              <button className="primary-button" type="submit" disabled={!selectedFile || isUploading}>
-                {isUploading ? 'Enviando...' : 'Enviar arquivo'}
-                <span aria-hidden="true">↗</span>
-              </button>
-            </div>
-          </form>
+          <UploadComponent onUpload={handleUpload} onError={setError} />
         </section>
 
         {error && (
@@ -182,51 +99,12 @@ export default function App() {
             <span className="section-note">Mais recentes primeiro</span>
           </div>
 
-          {isLoading ? (
-            <p className="list-message" role="status">Carregando documentos...</p>
-          ) : documents.length === 0 ? (
-            <div className="empty-state">
-              <span className="empty-mark" aria-hidden="true">—</span>
-              <p>Nenhum documento enviado.</p>
-            </div>
-          ) : (
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">Nome</th>
-                    <th scope="col">Adicionado em</th>
-                    <th scope="col">Tamanho</th>
-                    <th scope="col"><span className="visually-hidden">Ações</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {documents.map((document) => (
-                    <tr key={document.id}>
-                      <td data-label="Nome">
-                        <span className="file-mark" aria-hidden="true">DOC</span>
-                        <span className="file-name" title={document.originalName}>{document.originalName}</span>
-                      </td>
-                      <td data-label="Adicionado em">{formatDate(document.uploadedAt)}</td>
-                      <td data-label="Tamanho">{formatBytes(document.size)}</td>
-                      <td className="row-action">
-                        <button
-                          className="download-button"
-                          type="button"
-                          onClick={() => handleDownload(document)}
-                          disabled={downloadingId === document.id}
-                          aria-label={`Baixar ${document.originalName}`}
-                        >
-                          {downloadingId === document.id ? 'Baixando...' : 'Baixar'}
-                          {downloadingId !== document.id && <span aria-hidden="true">↓</span>}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DocumentList
+            documents={documents}
+            isLoading={isLoading}
+            onDownload={handleDownload}
+            onError={setError}
+          />
         </section>
 
         <footer className="workspace-footer">
